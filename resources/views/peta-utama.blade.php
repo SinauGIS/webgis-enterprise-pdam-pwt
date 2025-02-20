@@ -65,7 +65,10 @@
     Google_Roadmap.addTo(map);
 
     /* Layer GeoServer WFS */
-    var wfsgeoserver = L.geoJson(null, {
+    map.createPane("pane_pelanggan_dma");
+    map.getPane("pane_pelanggan_dma").style.zIndex = 401;
+    var pelanggan_dma = L.geoJson(null, {
+      pane: 'pane_pelanggan_dma',
       onEachFeature: function(feature, layer) {
         var popup_content = "<h3>" + feature.properties.nama_dma + "</h3>" +
           "<table class='table table-sm table-striped table-bordered'>" +
@@ -77,7 +80,7 @@
 
         layer.on({
           click: function(e) { //Fungsi ketika obyek diklik
-            wfsgeoserver.bindPopup(popup_content);
+            pelanggan_dma.bindPopup(popup_content);
           },
         });
       }
@@ -102,11 +105,11 @@
       dataType: 'jsonp',
       jsonpCallback: 'getJson',
       success: function(data) {
-        wfsgeoserver.addData(data);
-        map.addLayer(wfsgeoserver);
+        pelanggan_dma.addData(data);
+        map.addLayer(pelanggan_dma);
 
         // Zoom to layer
-        map.fitBounds(wfsgeoserver.getBounds());
+        map.fitBounds(pelanggan_dma.getBounds());
       }
     });
 
@@ -135,6 +138,8 @@
     // });
 
     /* Layer GeoServer WMS */
+    map.createPane("pane_pelanggan");
+    map.getPane("pane_pelanggan").style.zIndex = 450;
     var pelanggan = L.tileLayer.wms("http://103.25.210.59:8080/geoserver/pdam/wms", {
       layers: 'pdam:stagging_cust',
       format: 'image/png',
@@ -143,6 +148,7 @@
       opacity: 0.8,
       attribution: 'WMS GeoServer',
       maxZoom: 20,
+      pane: 'pane_pelanggan',
     });
     pelanggan.addTo(map);
 
@@ -270,8 +276,8 @@
     };
 
     var overlayMaps = {
-      "Distrik Meter Area<br>&nbsp;<svg width='24' height='15'><rect x='2' y='2' width='20' height='12' stroke='gray' stroke-width='1' fill='#ffffb2' /></svg> < 2500<br>&nbsp;<svg width='24' height='15'><rect x='2' y='2' width='20' height='12' stroke='gray' stroke-width='1' fill='#fd8d3c' /></svg> 2500 - 5000<br>&nbsp;<svg width='24' height='15'><rect x='2' y='2' width='20' height='12' stroke='gray' stroke-width='1' fill='#bd0026' /></svg> > 5000": pelanggan_dma,
       "Pelanggan PDAM": pelanggan,
+      "Distrik Meter Area<br>&nbsp;<svg width='24' height='15'><rect x='2' y='2' width='20' height='12' stroke='gray' stroke-width='1' fill='#ffffb2' /></svg> < 2500<br>&nbsp;<svg width='24' height='15'><rect x='2' y='2' width='20' height='12' stroke='gray' stroke-width='1' fill='#fd8d3c' /></svg> 2500 - 5000<br>&nbsp;<svg width='24' height='15'><rect x='2' y='2' width='20' height='12' stroke='gray' stroke-width='1' fill='#bd0026' /></svg> > 5000": pelanggan_dma,
     };
 
     var controllayer = L.control.layers(baseMaps, overlayMaps, {
