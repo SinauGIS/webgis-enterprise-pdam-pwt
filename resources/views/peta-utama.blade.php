@@ -68,7 +68,39 @@
     map.createPane("pane_pelanggan_dma");
     map.getPane("pane_pelanggan_dma").style.zIndex = 400;
     var pelanggan_dma = L.geoJson(null, {
+
       pane: "pane_pelanggan_dma",
+      style: function(feature) {
+        console.log(feature);
+        if (feature.properties.jml_pelanggan < 2500) {
+          return {
+            opacity: 1,
+            color: 'black',
+            weight: 1.0,
+            fillOpacity: 0.7,
+            fillColor: '#ffffb2'
+          }
+        }
+        if (feature.properties.jml_pelanggan >= 2500 && feature.properties.jml_pelanggan <= 5000) {
+          return {
+            opacity: 1,
+            color: 'black',
+            weight: 1.0,
+            fillOpacity: 0.7,
+            fillColor: '#fd8d3c'
+          }
+        }
+        if (feature.properties.jml_pelanggan > 5000) {
+          return {
+            opacity: 1,
+            color: 'black',
+            weight: 1.0,
+            fillOpacity: 0.7,
+            fillColor: '#bd0026'
+          }
+        }
+      },
+
       onEachFeature: function(feature, layer) {
         var popup_content = "<h3>" + feature.properties.nama_dma + "</h3>" +
           "<table class='table table-sm table-striped table-bordered'>" +
@@ -144,7 +176,7 @@
       format: 'image/png',
       version: '1.1.1',
       transparent: true,
-      opacity: 0.8,
+      opacity: 1,
       attribution: 'WMS GeoServer',
       maxZoom: 20,
       pane: 'pane_pelanggan',
