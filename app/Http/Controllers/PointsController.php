@@ -8,23 +8,23 @@ use App\Models\StatusPelangganModel;
 
 class PointsController extends Controller
 {
-	public function __construct()
-	{
-		$this->points = new PointsModel();
-		$this->statuspelanggan = new StatusPelangganModel();
-	}
+    public function __construct()
+    {
+        $this->points = new PointsModel();
+        $this->statuspelanggan = new StatusPelangganModel();
+    }
 
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-			$data = [
-				'title' => 'Peta Pelanggan PDAM',
-				'statuspelanggan' => $this->statuspelanggan->all(),
-			];
+        $data = [
+            'title' => 'Peta Pelanggan PDAM',
+            'statuspelanggan' => $this->statuspelanggan->all(),
+        ];
 
-      return view('map', $data);
+        return view('map', $data);
     }
 
     /**
@@ -40,19 +40,18 @@ class PointsController extends Controller
      */
     public function store(Request $request)
     {
-      $data = [
-				'geom' => $request->geom_point,
-				'nama' => $request->nama,
-				'alamat' => $request->alamat,
-				'status_pelanggan_id' => $request->status,
-			];
+        $data = [
+            'geom' => $request->geom_point,
+            'nama' => $request->nama,
+            'alamat' => $request->alamat,
+            'status_pelanggan_id' => $request->status,
+        ];
 
-			// Insert data to database
-			$this->points->create($data);
+        // Insert data to database
+        $this->points->create($data);
 
-			// Redirect to halaman peta pelanggan
-			return redirect()->route('pelanggan.index');
-
+        // Redirect to halaman peta pelanggan
+        return redirect()->route('pelanggan.index');
     }
 
     /**
