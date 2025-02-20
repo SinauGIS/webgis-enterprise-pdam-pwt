@@ -66,9 +66,9 @@
 
     /* Layer GeoServer WFS */
     map.createPane("pane_pelanggan_dma");
-    map.getPane("pane_pelanggan_dma").style.zIndex = 401;
+    map.getPane("pane_pelanggan_dma").style.zIndex = 400;
     var pelanggan_dma = L.geoJson(null, {
-      pane: 'pane_pelanggan_dma',
+      pane: "pane_pelanggan_dma",
       onEachFeature: function(feature, layer) {
         var popup_content = "<h3>" + feature.properties.nama_dma + "</h3>" +
           "<table class='table table-sm table-striped table-bordered'>" +
@@ -77,7 +77,6 @@
           "<tr><th>Pemakaian</th><td>" + feature.properties.pemakaian + " m<sup>3</sup></td></tr>" +
           "<tr><th>Jumlah Tagihan</th><td>Rp " + feature.properties.tagihan + "</td></tr>" +
           "</table>";
-
         layer.on({
           click: function(e) { //Fungsi ketika obyek diklik
             pelanggan_dma.bindPopup(popup_content);
@@ -139,7 +138,7 @@
 
     /* Layer GeoServer WMS */
     map.createPane("pane_pelanggan");
-    map.getPane("pane_pelanggan").style.zIndex = 450;
+    map.getPane("pane_pelanggan").style.zIndex = 550;
     var pelanggan = L.tileLayer.wms("http://103.25.210.59:8080/geoserver/pdam/wms", {
       layers: 'pdam:stagging_cust',
       format: 'image/png',
