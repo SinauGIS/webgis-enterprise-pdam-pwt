@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDAM Purwokerto</title>
+  <title>PDAM Tirta Satria</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
@@ -33,6 +33,13 @@
     var center = [-7.4279302, 109.2408501];
 
     var map = L.map('map').setView(center, 11);
+
+    // bbox map
+    var bounds = map.getBounds();
+    var minll = bounds.getSouthWest();
+    var maxll = bounds.getNorthEast();
+    var bbox = minll.lng + ',' + minll.lat + ',' + maxll.lng + ',' + maxll.lat;
+    console.log(bbox);
 
     // Tile Layer Basemap
     var osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -64,43 +71,131 @@
     // Menambahkan basemap ke dalam peta
     Google_Roadmap.addTo(map);
 
+    /* Geoserver JSONP URL */
+    var owsrootUrl = 'http://103.25.210.59:8080/geoserver/pdam/ows';
+    var owsTutorialUrl = 'http://103.25.210.59:8080/geoserver/Tutorial/ows';
+
     /* Layer GeoServer WFS */
-    map.createPane("pane_pelanggan_dma");
-    map.getPane("pane_pelanggan_dma").style.zIndex = 400;
-    var pelanggan_dma = L.geoJson(null, {
+    // Layer Pelanggan
+    map.createPane("pane_pelanggan");
+    map.getPane("pane_pelanggan").style.zIndex = 500;
+    var pelanggan = L.geoJson(null, {
+      pane: "pane_pelanggan",
+      onEachFeature: function(feature, layer) {
+        var popup_content = "<h3>" + feature.properties.nama + "</h3>" +
+          "<table class='table table-sm table-striped table-bordered'>" +
+          "<tr><th>Alamat</th><td>" + feature.properties.alamat + "</td></tr>" +
+          "<tr><th>Kecamatan</th><td>" + feature.properties.kecamatan + "</td></tr>" +
+          "<tr><th>Desa</th><td>" + feature.properties.desa + "</td></tr>" +
+          "<tr><th>RT/RW</th><td>" + feature.properties.rt + " / " + feature.properties.rw + "</td></tr>" +
+          "<tr><th>Tarif</th><td>" + feature.properties.nama_tarif + " (" + feature.properties.kode_tarif +
+          ")</td></tr>" +
+          "<tr><th>Status</th><td>" + feature.properties.status + "</td></tr>" +
+          "</table>";
+        layer.on({
+          click: function(e) { //Fungsi ketika obyek diklik
+            pelanggan.bindPopup(popup_content);
+          },
+          mouseover: function(e) { //Fungsi ketika obyek dihover
+            pelanggan.bindTooltip(feature.properties.nama + " (" + feature.properties.nama_tarif + ")", {
+              sticky: true,
+              direction: 'top'
+            });
+          }
+        });
+      }
+    });
 
-      pane: "pane_pelanggan_dma",
-      style: function(feature) {
-        console.log(feature);
-        if (feature.properties.jml_pelanggan < 2500) {
-          return {
-            opacity: 1,
-            color: 'black',
-            weight: 1.0,
-            fillOpacity: 0.7,
-            fillColor: '#ffffb2'
-          }
-        }
-        if (feature.properties.jml_pelanggan >= 2500 && feature.properties.jml_pelanggan <= 5000) {
-          return {
-            opacity: 1,
-            color: 'black',
-            weight: 1.0,
-            fillOpacity: 0.7,
-            fillColor: '#fd8d3c'
-          }
-        }
-        if (feature.properties.jml_pelanggan > 5000) {
-          return {
-            opacity: 1,
-            color: 'black',
-            weight: 1.0,
-            fillOpacity: 0.7,
-            fillColor: '#bd0026'
-          }
-        }
-      },
+    var pelangganParameters = {
+      service: 'WFS',
+      version: '1.0.0',
+      request: 'GetFeature',
+      typeName: 'pdam:stagging_cust',
+      outputFormat: 'text/javascript',
+      format_options: 'callback:getJson',
+      srsName: 'EPSG:4326',
+      // cql_filter: "kode_dma='01021'",
+      maxFeatures: 100,
+      bbox: bbox
+    };
+    var parametersPelanggan = L.Util.extend(pelangganParameters);
+    var pelangganURL = owsrootUrl + L.Util.getParamString(parametersPelanggan);
 
+    $.ajax({
+      url: pelangganURL,
+      dataType: 'jsonp',
+      jsonpCallback: 'getJson',
+      success: function(data) {
+        pelanggan.addData(data);
+        map.addLayer(pelanggan);
+      }
+    });
+
+    // Layer Pipa
+    map.createPane("pane_pipa");
+    map.getPane("pane_pipa").style.zIndex = 400;
+    var pipa = L.geoJson(null, {
+      pane: "pane_pipa",
+      onEachFeature: function(feature, layer) {
+        var popup_content = "<h3>Pipa</h3>" +
+          "<table class='table table-sm table-striped table-bordered'>" +
+          "<tr><th>Panjang</th><td>" + feature.properties.pjg_meter + " m</td></tr>" +
+          "<tr><th>Diameter</th><td>" + feature.properties.diameter + " m<sup>3</sup></td></tr>" +
+          "<tr><th>Keterangan</th><td>" + feature.properties.keterangan + "</td></tr>" +
+          "</table>";
+        layer.on({
+          click: function(e) { //Fungsi ketika obyek diklik
+            pipa.bindPopup(popup_content);
+          },
+          mouseover: function(e) { //Fungsi ketika obyek dihover
+            pipa.bindTooltip(feature.properties.pjg_meter + " m", {
+              sticky: true,
+              direction: 'top'
+            });
+          }
+        });
+      }
+    });
+
+    var pipaParameters = {
+      service: 'WFS',
+      version: '1.0.0',
+      request: 'GetFeature',
+      typeName: 'Tutorial:pipa',
+      outputFormat: 'text/javascript',
+      format_options: 'callback:getJsonPipa',
+      srsName: 'EPSG:4326',
+      maxFeatures: 1000,
+      bbox: bbox
+    };
+    var parameterspipa = L.Util.extend(pipaParameters);
+    var pipaURL = owsTutorialUrl + L.Util.getParamString(parameterspipa);
+
+    $.ajax({
+      url: pipaURL,
+      dataType: 'jsonp',
+      jsonpCallback: 'getJsonPipa',
+      success: function(data) {
+        pipa.addData(data);
+        map.addLayer(pipa);
+      }
+    });
+
+    // Layer DMA
+		var symbolDma = {"BANYUMAS": "green", "PURWOKERTO 1": "orange", "PURWOKERTO 2": "lime", "AJIBARANG": "#FADA7A", "WANGON": "magenta"};
+    map.createPane("pane_dma");
+    map.getPane("pane_dma").style.zIndex = 300;
+    var dma = L.geoJson(null, {
+      pane: "pane_dma",
+			style: function(feature) {
+				return {
+					color: "gray",
+					weight: 2,
+					opacity: 1,
+					fillColor: symbolDma[feature.properties.cabang],
+					fillOpacity: 0.5
+				};
+			},
       onEachFeature: function(feature, layer) {
         var popup_content = "<h3>" + feature.properties.nama_dma + "</h3>" +
           "<table class='table table-sm table-striped table-bordered'>" +
@@ -111,191 +206,43 @@
           "</table>";
         layer.on({
           click: function(e) { //Fungsi ketika obyek diklik
-            pelanggan_dma.bindPopup(popup_content);
+            dma.bindPopup(popup_content);
           },
+          mouseover: function(e) { //Fungsi ketika obyek dihover
+            dma.bindTooltip(feature.properties.nama_dma + " (" + feature.properties.kode_dma + ")", {
+              sticky: true,
+              direction: 'top'
+            });
+          }
         });
       }
     });
 
-    /* Geoserver JSONP */
-    var owsrootUrl = 'http://103.25.210.59:8080/geoserver/pdam/ows';
-    var defaultParameters = {
+    /* DMA */
+    var dmaParameters = {
       service: 'WFS',
       version: '1.0.0',
       request: 'GetFeature',
       typeName: 'pdam:pelanggan_per_dma',
       outputFormat: 'text/javascript',
-      format_options: 'callback:getJson',
+      format_options: 'callback:getJsonDma',
       srsName: 'EPSG:4326',
     };
-    var parameters = L.Util.extend(defaultParameters);
-    var URL = owsrootUrl + L.Util.getParamString(parameters);
+    var parametersDma = L.Util.extend(dmaParameters);
+    var dmaURL = owsrootUrl + L.Util.getParamString(parametersDma);
 
     $.ajax({
-      url: URL,
+      url: dmaURL,
       dataType: 'jsonp',
-      jsonpCallback: 'getJson',
+      jsonpCallback: 'getJsonDma',
       success: function(data) {
-        pelanggan_dma.addData(data);
-        map.addLayer(pelanggan_dma);
+        dma.addData(data);
+        map.addLayer(dma);
 
         // Zoom to layer
-        map.fitBounds(pelanggan_dma.getBounds());
+        map.fitBounds(dma.getBounds());
       }
     });
-
-    // var pelangganParameters = {
-    // 	service: 'WFS',
-    // 	version: '1.0.0',
-    // 	request: 'GetFeature',
-    // 	typeName: 'purwokerto:pelanggan_pdam',
-    // 	outputFormat: 'text/javascript',
-    // 	format_options: 'callback:getJson1',
-    // 	srsName: 'EPSG:4326',
-    // 	// cql_filter: "kode_dma='01021'",
-    // 	maxFeatures: 100,
-    // };
-    // var pelanggan_parameters = L.Util.extend(pelangganParameters);
-    // var pelangganURL = owsrootUrl + L.Util.getParamString(pelanggan_parameters);
-
-    // $.ajax({
-    // 	url: pelangganURL,
-    // 	dataType: 'jsonp',
-    // 	jsonpCallback: 'getJson1',
-    // 	success: function (data) {
-    // 		pelanggan.addData(data);
-    // 		map.addLayer(pelanggan);
-    // 	}
-    // });
-
-    /* Layer GeoServer WMS */
-    map.createPane("pane_pelanggan");
-    map.getPane("pane_pelanggan").style.zIndex = 550;
-    var pelanggan = L.tileLayer.wms("http://103.25.210.59:8080/geoserver/pdam/wms", {
-      layers: 'pdam:stagging_cust',
-      format: 'image/png',
-      version: '1.1.1',
-      transparent: true,
-      opacity: 1,
-      attribution: 'WMS GeoServer',
-      maxZoom: 20,
-      pane: 'pane_pelanggan',
-    });
-    pelanggan.addTo(map);
-
-    //GetFeatureInfo Layer
-    vector = L.geoJSON();
-    vector.addTo(map);
-
-    map.on("click", GetFeatureInfo, pelanggan);
-
-    function GetFeatureInfo(e) {
-      let me = this,
-        map = me._map,
-        loc = e.latlng,
-        // xy = e.containerPoint,
-        xy = map.latLngToContainerPoint(loc, map.getZoom()),
-        size = map.getSize(),
-        bounds = map.getBounds(),
-        url = me._url,
-        crs = me.options.crs || map.options.crs, // me._crs
-        sw = crs.project(bounds.getSouthWest()),
-        ne = crs.project(bounds.getNorthEast()),
-        params = me.wmsParams,
-        obj = {
-          service: "WMS", // WMS (default)
-          version: params.version,
-          request: "GetFeatureInfo",
-          layers: params.layers,
-          styles: params.styles,
-          // bbox: bounds.toBBoxString(), // works only with EPSG4326, but not with EPSG3857
-          bbox: sw.x + "," + sw.y + "," + ne.x + "," + ne.y, // works with both EPSG4326, EPSG3857
-          width: size.x,
-          height: size.y,
-          query_layers: params.layers,
-          info_format: "application/json",
-          feature_count: 1 // 1 (default)
-        };
-
-      // console.log(obj);
-
-      if (parseFloat(params.version) >= 1.3) {
-        obj.crs = crs.code; // params.crs
-        obj.i = xy.x;
-        obj.j = xy.y;
-      } else {
-        obj.srs = crs.code; // params.srs
-        obj.x = xy.x;
-        obj.y = xy.y;
-      }
-      $.ajax({
-        url: url + L.Util.getParamString(obj, url, true),
-        success: function(data, status, xhr) {
-          console.log(data);
-          var features = data.features,
-            html = "",
-            popup;
-          map.removeLayer(vector);
-          if (features.length) {
-            // vector = L.geoJSON(data, { // works with both EPSG4326, EPSG3857
-            // works only with EPSG4326, but EPSG3857 doesn't highlights geometry, so we used proj4, proj4leaflet to convert geojson from EPSG3857 to EPSG4326
-
-            vector = L.Proj.geoJson(data, {
-              style: function(feature) {
-                return {
-                  // fillColor: "cyan",
-                  // fillOpacity: 0.7,
-                  color: "yellow",
-                  // weight: 1,
-                  opacity: 1,
-                };
-              },
-              onEachFeature: function(feature, layer) {
-                var infoPopup = "<table>" +
-                  "<tr><th>Nama</th><td>" + feature.properties.nama + "</td></tr>" +
-                  "<tr><th>Alamat</th><td>" + feature.properties.alamat + "</td></tr>" +
-                  "<tr><th>Kecamatan</th><td>" + feature.properties.kecamatan + "</td></tr>" +
-                  "</table>";
-                layer.on({
-                  mouseover: function(e) {
-                    vector.bindTooltip(infoPopup, {
-                      sticky: true,
-                      direction: 'top'
-                    });
-                  },
-                });
-              }
-            }).addTo(map); // works with both EPSG4326, EPSG3857
-
-            //POPUP
-            // for (let i in features) {
-            // 	let feature = features[i],
-            // 		attributes = feature.properties;
-            // 	html += "<table>" +
-            // 		"<tr><th>Nama</th><td>" + attributes.nama + "</td></tr>" +
-            // 		"<tr><th>Alamat</th><td>" + attributes.alamat + "</td></tr>" +
-            // 		"<tr><th>Kecamatan</th><td>" + attributes.kecamatan + "</td></tr>" +
-            // 		"</table>";
-            // }
-            // popup = L.popup(null, me).setLatLng(loc).setContent(html).openOn(map);
-            // me.on("popupclose", function () {
-            // 	map.removeLayer(vector);
-            // 	me.off("popupclose", function () { });
-            // });
-
-            //zoom to layer
-            map.fitBounds(vector.getBounds());
-          } else {
-            console.log('No features found.');
-          }
-        },
-        error: function(xhr, status, err) {
-          map.removeLayer(vector);
-          html = "Unable to complete the request.: " + err;
-          L.popup().setLatLng(loc).setContent(html).openOn(map);
-        }
-      });
-    }
 
     // Control Layer
     var baseMaps = {
@@ -308,13 +255,63 @@
 
     var overlayMaps = {
       "Pelanggan PDAM": pelanggan,
-      "Distrik Meter Area<br>&nbsp;<svg width='24' height='15'><rect x='2' y='2' width='20' height='12' stroke='gray' stroke-width='1' fill='#ffffb2' /></svg> < 2500<br>&nbsp;<svg width='24' height='15'><rect x='2' y='2' width='20' height='12' stroke='gray' stroke-width='1' fill='#fd8d3c' /></svg> 2500 - 5000<br>&nbsp;<svg width='24' height='15'><rect x='2' y='2' width='20' height='12' stroke='gray' stroke-width='1' fill='#bd0026' /></svg> > 5000": pelanggan_dma,
+			"Pipa": pipa,
+      "DMA": dma,
     };
 
     var controllayer = L.control.layers(baseMaps, overlayMaps, {
       collapsed: false
     });
     controllayer.addTo(map);
+
+		// Fungsi Update Layer berdasarkan bbox peta
+    function updateLayer() {
+      // bbox
+      var bounds = map.getBounds();
+      var minll = bounds.getSouthWest();
+      var maxll = bounds.getNorthEast();
+      var bbox = minll.lng + ',' + minll.lat + ',' + maxll.lng + ',' + maxll.lat;
+      console.log(bbox);
+
+      // URL
+      var pelangganURL = owsrootUrl + L.Util.getParamString(L.Util.extend(pelangganParameters, {
+        bbox: bbox
+      }));
+			$.ajax({
+				url: pelangganURL,
+				dataType: 'jsonp',
+				jsonpCallback: 'getJson',
+				success: function(data) {
+					pelanggan.clearLayers();
+					pelanggan.addData(data);
+					map.addLayer(pelanggan);
+				}
+			});
+
+			var pipaURL = owsTutorialUrl + L.Util.getParamString(L.Util.extend(pipaParameters, {
+				bbox: bbox
+			}));
+			$.ajax({
+				url: pipaURL,
+				dataType: 'jsonp',
+				jsonpCallback: 'getJsonPipa',
+				success: function(data) {
+					pipa.clearLayers();
+					pipa.addData(data);
+					map.addLayer(pipa);
+				}
+			});
+    }
+
+		// Event ketika peta digeser
+    map.on('moveend', function() {
+      updateLayer();
+    });
+
+		// Event ketika peta di-zoom
+    map.on('zoomend', function() {
+      updateLayer();
+    });
   </script>
 </body>
 

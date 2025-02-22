@@ -8,6 +8,14 @@ Route::get('/', function () {
     return view('peta-utama');
 });
 
+Route::get('/pipa', function () {
+    return view('peta-pipa');
+});
+
+Route::get('/peta-dma', function () {
+    return view('peta-dma');
+});
+
 Route::get('/pelanggan', [PointsController::class, 'index'])->name('pelanggan.index');
 Route::post('/pelanggan-simpan', [PointsController::class, 'store'])->name('pelanggan.store');
 
