@@ -13,9 +13,6 @@
     integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"
-    integrity="sha512-gc3xjCmIy673V6MyOAZhIW93xhM9ei1I+gLbmFjUHIjocENRsLX/QUE1htk5q1XV2D/iie/VQ8DXI6Vu8bexvQ=="
-    crossorigin="anonymous" referrerpolicy="no-referrer" />
   <style>
     #map {
       margin-top: 56px;
@@ -49,59 +46,6 @@
   </nav>
 
   <div id="map"></div>
-
-  <!-- Modal Create Point -->
-  <div class="modal fade" id="createpointModal" tabindex="-1" aria-labelledby="createpointModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h1 class="modal-title fs-5" id="createpointModalLabel"><i class="fa-solid fa-location-dot"></i> Create Point
-          </h1>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <form action="{{ route('pelanggan.store') }}" method="Post" enctype="multipart/form-data">
-            @csrf
-            <div class="mb-3">
-              <label for="nama" class="form-label">Nama</label>
-              <input type="text" class="form-control" id="nama" name="nama" placeholder="Fill in the nama"
-                required>
-            </div>
-            <div class="mb-3">
-              <label for="alamat" class="form-label">Alamat</label>
-              <textarea class="form-control" id="alamat" name="alamat" rows="3" placeholder="Fill in the alamat"></textarea>
-            </div>
-            <div class="mb-3">
-              <label for="status" class="form-label">Status</label>
-              <select name="status" id="status" class="form-select">
-								@foreach ($statuspelanggan as $sp)
-									<option value="{{ $sp->id }}">{{ $sp->status }}</option>
-								@endforeach
-							</select>
-            </div>
-            <div class="mb-3">
-              <label for="geom_point" class="form-label">Geometry WKT</label>
-              <textarea class="form-control" id="geom_point" name="geom_point" rows="2" readonly></textarea>
-            </div>
-            <div class="mb-3">
-              <label for="image" class="form-label">Image</label>
-              <input type="file" class="form-control" id="image" name="image"
-                onchange="document.getElementById('image-preview-point').src = window.URL.createObjectURL(this.files[0])">
-            </div>
-            <div class="mb-3">
-              <img id="image-preview-point" class="img-thumbnail" alt="" width="400">
-            </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i
-              class="fa-solid fa-circle-xmark"></i> Cancel</button>
-          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Modal Info -->
   <div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
@@ -140,13 +84,19 @@
     integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"
-    integrity="sha512-ozq8xQKq6urvuU6jNgkfqAmT7jKN2XumbrX1JiB3TnF7tI48DPI4Gy1GXKD/V3EExgAs1V+pRO7vwtS1LHg0Gw=="
-    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://unpkg.com/@terraformer/wkt"></script>
   <script>
     // init map
     var map = L.map('map').setView([-7.4279302, 109.2408501], 12);
+
+    // bbox map
+    var bounds = map.getBounds();
+    var minll = bounds.getSouthWest();
+    var maxll = bounds.getNorthEast();
+    var bbox = minll.lng + ',' + minll.lat + ',' + maxll.lng + ',' + maxll.lat;
+    console.log(bbox);
+
+    var zoom = map.getZoom();
+    console.log(zoom);
 
     // Tile Layer Basemap
     var osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -176,104 +126,73 @@
     });
 
     // Menambahkan basemap ke dalam peta
-    Esri_WorldImagery.addTo(map);
+    Google_Roadmap.addTo(map);
 
-    /* Digitize Function with Leaflet Draw */
-    var drawnItems = new L.FeatureGroup();
-    map.addLayer(drawnItems);
+    // GeoJSON pelanggan
+    var pelanggan = L.geoJSON(null, {
+      // Style
 
-    var drawControl = new L.Control.Draw({
-      draw: {
-        position: 'topleft',
-        polyline: true,
-        polygon: true,
-        rectangle: true,
-        circle: false,
-        marker: true,
-        circlemarker: false
-      },
-      edit: false
-    });
-
-    map.addControl(drawControl);
-
-    // Draw created event
-    map.on('draw:created', function(e) {
-      var type = e.layerType,
-        layer = e.layer;
-
-      console.log(type);
-
-      // Convert to GeoJSON
-      var drawnJSONObject = layer.toGeoJSON();
-
-      // Convert Geometry GeoJSON to WKT
-      var objectGeometry = Terraformer.geojsonToWKT(drawnJSONObject.geometry);
-
-      if (type === 'polyline') {
-        console.log(objectGeometry);
-      } else if (type === 'polygon' || type === 'rectangle') {
-        console.log(objectGeometry);
-      } else if (type === 'marker') {
-        $('#geom_point').val(objectGeometry);
-        $('#createpointModal').modal('show');
-
-        // modal dismiss reload
-        $('#createpointModal').on('hidden.bs.modal', function() {
-          location.reload();
-        });
-      } else {
-        console.log('__undefined__');
-      }
-
-      // Layer drawn items add to map
-      drawnItems.addLayer(layer);
-    });
-
-    /* Layer GeoServer WFS */
-    var wfsgeoserver = L.geoJson(null, {
+      // onEachFeature
       onEachFeature: function(feature, layer) {
-        var popup_content = "<h3>" + feature.properties.nama_dma + "</h3>" +
-          "<table class='table table-sm table-striped table-bordered'>" +
-          "<tr><th>Cabang</th><td>" + feature.properties.cabang + "</td></tr>" +
-          "<tr><th>Jumlah Pelanggan</th><td>" + feature.properties.jml_pelanggan + "</td></tr>" +
-          "<tr><th>Pemakaian</th><td>" + feature.properties.pemakaian + " m<sup>3</sup></td></tr>" +
-          "<tr><th>Jumlah Tagihan</th><td>Rp " + feature.properties.tagihan + "</td></tr>" +
-          "</table>";
+        // variable popup content
+        var popup_content = "Nama: " + feature.properties.nama + "<br>" +
+          "Alamat: " + feature.properties.alamat + "<br>" +
+          "Koordinat: " + feature.geometry.coordinates[1] + ", " + feature.geometry.coordinates[0];
 
         layer.on({
-          click: function(e) { //Fungsi ketika obyek diklik
-            wfsgeoserver.bindPopup(popup_content);
+          click: function(e) {
+            pelanggan.bindPopup(popup_content);
+          },
+          mouseover: function(e) {
+            pelanggan.bindTooltip(feature.properties.nama);
           },
         });
-      }
+      },
+    });
+    $.getJSON("{{ route('api.pelanggans') }}?bbox=" + bbox, function(data) {
+      pelanggan.addData(data); // Menambahkan data ke dalam pelanggan variable
+      map.addLayer(pelanggan); // Menambahkan GeoJSON pelanggan ke dalam peta
     });
 
-    /* Geoserver JSONP */
-    var owsrootUrl = 'http://103.25.210.59:8080/geoserver/pdam/ows';
-    var defaultParameters = {
-      service: 'WFS',
-      version: '1.0.0',
-      request: 'GetFeature',
-      typeName: 'pdam:pelanggan_per_dma',
-      outputFormat: 'text/javascript',
-      format_options: 'callback:getJson',
-      srsName: 'EPSG:4326',
-    };
-    var parameters = L.Util.extend(defaultParameters);
-    var URL = owsrootUrl + L.Util.getParamString(parameters);
+    // GeoJSON dma
+		var symbolDma = {"BANYUMAS": "green", "PURWOKERTO 1": "orange", "PURWOKERTO 2": "lime", "AJIBARANG": "#FADA7A", "WANGON": "magenta"};
+    var dma = L.geoJSON(null, {
+      // Style
+			style: function(feature) {
+				return {
+					color: "gray",
+					weight: 2,
+					opacity: 1,
+					fillColor: symbolDma[feature.properties.cabang],
+					fillOpacity: 0.3
+				};
+			},
+      // onEachFeature
+      onEachFeature: function(feature, layer) {
+        // variable popup content
+        var popup_content = "<h6>" + feature.properties.nama_dma + "</h6>" +
+          "Kode: " + feature.properties.kode_dma + "<br>" +
+          "Cabang: " + feature.properties.cabang + "<br>" +
+          "Jumlah Pelanggan: " + feature.properties.pelanggan.toLocaleString() + "<br>" +
+          "Jumlah Tagihan: Rp " + feature.properties.tagihan.toLocaleString() + ",-<br>" +
+          "Sumber Air: " + feature.properties.sumber_air;
+    
 
-    $.ajax({
-      url: URL,
-      dataType: 'jsonp',
-      jsonpCallback: 'getJson',
-      success: function(data) {
-        wfsgeoserver.addData(data);
-        map.addLayer(wfsgeoserver);
-
-        // Zoom to layer
-        map.fitBounds(wfsgeoserver.getBounds());
-      }
+        layer.on({
+          click: function(e) {
+            dma.bindPopup(popup_content);
+          },
+          mouseover: function(e) {
+            dma.bindTooltip(feature.properties.nama_dma, {
+							sticky: true
+						});
+          },
+        });
+      },
+    });
+    $.getJSON("{{ route('api.dmas') }}", function(data) {
+      dma.addData(data); // Menambahkan data ke dalam dma variable
+      map.addLayer(dma); // Menambahkan GeoJSON dma ke dalam peta
     });
 
     // Control Layer
@@ -286,13 +205,41 @@
     };
 
     var overlayMaps = {
-      // "DMA WMS": dma_wms,
+      "Pelanggan": pelanggan,
+			"DMA": dma,
     };
 
     var controllayer = L.control.layers(baseMaps, overlayMaps, {
       collapsed: false
     });
     controllayer.addTo(map);
+
+    // update layer pelanggan
+    function updateLayerPelanggan() {
+      var bounds = map.getBounds();
+      var minll = bounds.getSouthWest();
+      var maxll = bounds.getNorthEast();
+      var bbox = minll.lng + ',' + minll.lat + ',' + maxll.lng + ',' + maxll.lat;
+      console.log(bbox);
+
+      var zoom = map.getZoom();
+      console.log(zoom);
+
+      $.getJSON("{{ route('api.pelanggans') }}?bbox=" + bbox, function(data) {
+        pelanggan.clearLayers();
+        pelanggan.addData(data);
+      });
+    }
+
+    // event map moveend
+    map.on('moveend', function() {
+      updateLayerPelanggan();
+    });
+
+    // event map zoomend
+    map.on('zoomend', function() {
+      updateLayerPelanggan();
+    });
   </script>
 </body>
 

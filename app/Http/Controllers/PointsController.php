@@ -21,7 +21,6 @@ class PointsController extends Controller
     {
         $data = [
             'title' => 'Peta Pelanggan PDAM',
-            'statuspelanggan' => $this->statuspelanggan->all(),
         ];
 
         return view('map', $data);
